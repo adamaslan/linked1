@@ -21,17 +21,18 @@ def get_auth_code():
         'response_type': 'code',
         'client_id': CLIENT_ID,
         'redirect_uri': REDIRECT_URI,
-        'scope': 'w_member_social'
+        'scope': 'w_member_social r_liteprofile'
     }
     auth_url = f"{AUTH_URL}?{'&'.join([f'{k}={v}' for k, v in params.items()])}"
     print(f"Authorize here: {auth_url}")
-    auth_code = input("Enter the authorization code from the redirect URL: ")
+    auth_code = input("Enter the authorization code from the redirect URL (copy and paste after 'code='): ")
     print(f"Authorization code: {auth_code}")
     return auth_code
 
 def get_access_token(auth_code):
     """Exchanges authorization code for an access token and saves it."""
     print("get_access_token() called")
+    print(f"Authorization code received: {auth_code}")
     data = {
         'grant_type': 'authorization_code',
         'code': auth_code,
@@ -40,12 +41,35 @@ def get_access_token(auth_code):
         'client_secret': CLIENT_SECRET
     }
     response = requests.post(TOKEN_URL, data=data)
-    response.raise_for_status()
-    token_data = response.json()
-    print(f"Token data: {token_data}")
-    with open(TOKEN_FILE, 'w') as f:
-        f.write(token_data['access_token'])
-    return token_data['access_token']
+    try:
+        response.raise_for_status()
+        token_data = response.json()
+        print(f"Token data: {token_data}")
+        with open(TOKEN_FILE, 'w') as f:
+            f.write(token_data['access_token'])
+        return token_data['access_token']
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTPError: {e}")
+        return None
+
+def authenticate():
+    """Full authentication flow to obtain and save access token."""
+    print("Initiating LinkedIn authentication...")
+    auth_code = get_auth_code()
+    access_token = get_access_token(auth_code)
+    print("Successfully authenticated. Access token stored in", TOKEN_FILE)
+    print(f"Access token: {access_token}")
+    # Add r_liteprofile scope to the access token
+    headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
+    response = requests.get("https://api.linkedin.com/v2/me", headers=headers)
+    try:
+        response.raise_for_status()
+        data = response.json()
+        print(f"LinkedIn URN: {data['id']}")
+    except requests.exceptions.HTTPError as e:
+        print(f"Error retrieving LinkedIn URN: {e}")
 
 if __name__ == '__main__':
-    get_auth_code()
+    authenticate()

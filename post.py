@@ -17,15 +17,17 @@ def load_access_token():
             "No access token found. Authenticate first using the authenticate() function."
         )
     with open(TOKEN_FILE, 'r') as f:
-        return f.read().strip()
+        access_token = f.read().strip()
+        print(f"Access token loaded from file: {access_token}")
+        return access_token
 
 def create_linkedin_post(post_text, author_urn='urn:li:person:YOUR_MEMBER_ID'):
     """Creates a LinkedIn post with the specified text."""
     access_token = load_access_token()
     headers = {
-        'Authorization': f'Bearer {access_token}',
         'Content-Type': 'application/json',
-        'X-Restli-Protocol-Version': '2.0.0'
+        'X-Restli-Protocol-Version': '2.0.0',
+        'Authorization': f'Bearer {access_token}'
     }
     
     post_payload = {
@@ -44,18 +46,20 @@ def create_linkedin_post(post_text, author_urn='urn:li:person:YOUR_MEMBER_ID'):
         }
     }
     
-    response = requests.post(POST_URL, headers=headers, json=post_payload)
-    response.raise_for_status()
-    return response.json()
+    try:
+        response = requests.post(POST_URL, headers=headers, json=post_payload)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.HTTPError as e:
+        print(f"Error creating post: {e}")
+        print(f"Response content: {response.content}")
+        return None
 
 if __name__ == '__main__':
     # Example usage (Uncomment sections as needed):
     
-    # 1. Run authentication flow (once)
-    authenticate()
-    
     # 2. Create a post
-    post_content = "Hello LinkedIn! Sharing insights via API integration. #developer"
+    post_content = "Hello LinkedIn! We are ZXY GALLERY"
     try:
         post_result = create_linkedin_post(post_content)
         print("Post successfully created:", post_result)
